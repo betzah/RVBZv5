@@ -2648,7 +2648,7 @@ END GROUP
  .debug_frame   0x00001780      0x210 timeEvent.o
  .debug_frame   0x00001990      0x2a0 twiDriver.o
 
-.debug_str      0x00000000     0x5c87
+.debug_str      0x00000000     0x5c4a
  *(.debug_str)
  .debug_str     0x00000000     0x14cc adcDriver.o
                                0x157b (size before relaxing)
@@ -2672,19 +2672,19 @@ END GROUP
                                 0xec3 (size before relaxing)
  .debug_str     0x00003cc1       0xb4 LUFA/LUFA/Drivers/USB/Core/XMEGA/USBInterrupt_XMEGA.o
                                 0x946 (size before relaxing)
- .debug_str     0x00003d75      0x1e6 main.o
-                                0x544 (size before relaxing)
- .debug_str     0x00003f5b      0xa39 menu.o
+ .debug_str     0x00003d75      0x1a9 main.o
+                                0x557 (size before relaxing)
+ .debug_str     0x00003f1e      0xa39 menu.o
                                0x135d (size before relaxing)
- .debug_str     0x00004994      0x93f peripherals.o
+ .debug_str     0x00004957      0x93f peripherals.o
                                0x1f17 (size before relaxing)
- .debug_str     0x000052d3      0x1f6 remoteDriver.o
+ .debug_str     0x00005296      0x1f6 remoteDriver.o
                                 0xb93 (size before relaxing)
- .debug_str     0x000054c9       0xf8 rtcDriver.o
+ .debug_str     0x0000548c       0xf8 rtcDriver.o
                                 0x7fe (size before relaxing)
- .debug_str     0x000055c1      0x3ae timeEvent.o
+ .debug_str     0x00005584      0x3ae timeEvent.o
                                 0xf1c (size before relaxing)
- .debug_str     0x0000596f      0x318 twiDriver.o
+ .debug_str     0x00005932      0x318 twiDriver.o
                                 0x8e1 (size before relaxing)
 
 .debug_loc      0x00000000     0x94c7
