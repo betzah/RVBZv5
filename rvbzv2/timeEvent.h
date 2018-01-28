@@ -13,6 +13,8 @@
 #include <stddef.h>
 #include <stdbool.h>
 
+#include "rtcDriver.h"
+
 // Buffer size
 #define EVENT_MAX		20 // one element uses 11 bytes RAM + 4 bytes RAM for cpu calculation
 
@@ -21,7 +23,7 @@
 #define EVENT_REFRESH_TIME_MS		20
 
 #define TC_CCA_INT_TIME				(EVENT_REFRESH_TIME_MS * (F_CPU / 64 / 1000)  - 1)
-#define CONVERT_TO_MS(TC_VALUE)		do { TC_VALUE /= (F_CPU / 64 / 1000); } while(0);
+#define CONVERT_TO_MS(TC_VALUE)		(TC_VALUE / (F_CPU / 64 / 1000))
 
 //#define MEASURE_EVENTS_CPU
 
@@ -35,6 +37,13 @@ typedef void(*functionPtr)(void);
 typedef uint32_t TimeEvent_t;
 
 
+// typedef union
+// {
+// 	uint32_t ms;
+// 	time_t day;
+// } TimeEvent_t;
+
+
 // Events struct
 typedef struct
 {
@@ -46,8 +55,9 @@ typedef struct
 	uint16_t cputime;		// units of 
 	uint16_t cputime_temp;	// units of 
 #endif
-
-	int8_t repeation;
+	
+	unsigned int isAbsoluteTime : 1;
+	unsigned int repeation : 7;
 } events_t;
 
 
@@ -64,7 +74,8 @@ typedef struct
 
 void eventInit(cpu_t * cpuPtr);
 bool eventAdd(TimeEvent_t interval_ms, int8_t repeation, void (*funcPtr)());
-bool eventAddSafe(TimeEvent_t interval_ms, int8_t repeation, void (*funcPtr)());
+//bool eventAddRTC( /* uint16_t ms, */ uint8_t second, uint8_t minute, uint8_t hour, int8_t repeation, void (*funcPtr)());
+//bool eventAddSafe(TimeEvent_t interval_ms, int8_t repeation, void (*funcPtr)());
 uint8_t eventRemove(void (*funcPtr)());
 bool eventTimerRestart(void (*funcPtr)());
 bool eventTimerTrigger(void (*funcPtr)());
@@ -75,7 +86,7 @@ TimeEvent_t eventGetTimeleft(void (*funcPtr)());
 TimeEvent_t eventGetInterval(void (*funcPtr)());
 int8_t eventGetRepeation(void (*funcPtr)());
 bool eventSetTimeleft(void (*funcPtr)(), TimeEvent_t timeleft);
-bool eventSetInterval(void (*funcPtr)(), TimeEvent_t interval);
+bool eventSetInterval(void (*funcPtr)(), TimeEvent_t interval, TimeEvent_t timeleft);
 bool eventSetRepeation(void (*funcPtr)(), int8_t repeation);
 
 void eventControllerLoop(void);

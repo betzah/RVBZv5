@@ -16,6 +16,8 @@ typedef enum
 	noone,
 	
 	power_switch,
+	poweron_switch,
+	poweroff_switch,
 	channel_number,
 	
 	power,

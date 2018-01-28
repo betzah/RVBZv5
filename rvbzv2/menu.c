@@ -50,7 +50,7 @@ typedef enum ROOMS_enum
 
 bool EEMEM alarmEnabledEEPROM = 0;
 uint8_t EEMEM deviceTypeEEPROM;
-time_t EEMEM alarmEEPROM, timeEEPROM;
+datetime_t EEMEM alarmEEPROM, timeEEPROM;
 static ROOMS_t room;
 static textInput_t textInput;
 
@@ -78,7 +78,7 @@ void roomInit()
 	EEPROM_DO_CLAMP(&hardware.device.type, &deviceTypeEEPROM, 1, 1, 2, EEPROM_LOAD);
 	EEPROM_DO_CLAMP(&hardware.alarmEnabled, &alarmEnabledEEPROM, hardware.alarmEnabled, 0, 1, EEPROM_LOAD);
 	EEPROM_DO(&hardware.alarm, &alarmEEPROM, EEPROM_LOAD);
-	EEPROM_DO(&hardware.time, &timeEEPROM, EEPROM_LOAD);
+	EEPROM_DO(&hardware.datetime, &timeEEPROM, EEPROM_LOAD);
 }
 
 
@@ -182,7 +182,7 @@ static void roomKeysMenuMain(uint8_t key)
 static void roomKeysMenuSettings(uint8_t key)
 {
 	uint8_t newIP[4];
-	time_t newTime;
+	datetime_t newTime;
 	memset(&newIP, 0, sizeof newIP);
 	memset(&newTime, 0, sizeof newTime);
 	
@@ -219,10 +219,10 @@ static void roomKeysMenuSettings(uint8_t key)
 				eeprom_update_byte((uint8_t *) &alarmEnabledEEPROM, (uint8_t) hardware.alarmEnabled);
 				appUIPrintln("Alarm enabled");
 			
-				if (RTCIsSurpassed(&hardware.time, &hardware.alarm))
+				if (RTCIsSurpassedDatetime(&hardware.datetime, &hardware.alarm))
 				{
-					RTCUpdateDate(&hardware.alarm, hardware.time.year, hardware.time.month, hardware.time.day);
-					RTCAddDate(&hardware.alarm, 0, 0, 1);
+					RTCUpdateDate(&hardware.alarm.date, hardware.datetime.date.year, hardware.datetime.date.month, hardware.datetime.date.day);
+					RTCAddDate(&hardware.alarm.date, 0, 0, 1);
 				}
 			}
 			else if (strstr_P(textInput.buf, PSTR("off")) != NULL)
@@ -235,55 +235,55 @@ static void roomKeysMenuSettings(uint8_t key)
 		
 		
 		// Update Date
-		else if (sscanf_P(textInput.buf, PSTR("d%*[^0-9]%hhu:%hhu:%hhu"), (uint8_t *) &newTime.year, (uint8_t *) &newTime.month, (uint8_t *) &newTime.day) == 3)
+		else if (sscanf_P(textInput.buf, PSTR("d%*[^0-9]%hhu:%hhu:%hhu"), (uint8_t *) &newTime.date.year, (uint8_t *) &newTime.date.month, (uint8_t *) &newTime.date.day) == 3)
 		{
-			if (RTCUpdateDate(&hardware.time, newTime.year, newTime.month, newTime.day) == true)
+			if (RTCUpdateDate(&hardware.datetime.date, newTime.date.year, newTime.date.month, newTime.date.day) == true)
 			{
 				writeTimeToEE();
-				RTCUpdateDate(&hardware.alarm, newTime.year, newTime.month, newTime.day);
+				RTCUpdateDate(&hardware.alarm.date, newTime.date.year, newTime.date.month, newTime.date.day);
 				appUIPrintln("Succesfully updated date to: ");
-				RTCPrintDate(&newTime);
+				RTCPrintDate(&newTime.date);
 				
-				if (RTCIsSurpassed(&hardware.time, &hardware.alarm))
+				if (RTCIsSurpassedDatetime(&hardware.datetime, &hardware.alarm))
 				{
-					RTCUpdateDate(&hardware.alarm, hardware.time.year, hardware.time.month, hardware.time.day);
-					RTCAddDate(&hardware.alarm, 0, 0, 1);
+					RTCUpdateDate(&hardware.alarm.date, hardware.datetime.date.year, hardware.datetime.date.month, hardware.datetime.date.day);
+					RTCAddDate(&hardware.alarm.date, 0, 0, 1);
 				} // */
 			}
 			else appUIPrintln("Failed updating date: invalid date!");
 		}
 		
 		// Update Time
-		else if (sscanf_P(textInput.buf, PSTR("t%*[^0-9]%hhu:%hhu:%hhu"), (uint8_t *) &newTime.hour, (uint8_t *) &newTime.minute, (uint8_t *) &newTime.second) == 3)
+		else if (sscanf_P(textInput.buf, PSTR("t%*[^0-9]%hhu:%hhu:%hhu"), (uint8_t *) &newTime.time.hour, (uint8_t *) &newTime.time.minute, (uint8_t *) &newTime.time.second) == 3)
 		{
-			if (RTCUpdateTime(&hardware.time, newTime.hour, newTime.minute, newTime.second) == true)
+			if (RTCUpdateTime(&hardware.datetime.time, newTime.time.hour, newTime.time.minute, newTime.time.second) == true)
 			{
 				writeTimeToEE();
 				appUIPrintln("Succesfully updated time to: ");
-				RTCPrintTime(&newTime);
+				RTCPrintTime(&newTime.time);
 				
-				if (RTCIsSurpassed(&hardware.time, &hardware.alarm))
+				if (RTCIsSurpassedDatetime(&hardware.datetime, &hardware.alarm))
 				{
-					RTCUpdateDate(&hardware.alarm, hardware.time.year, hardware.time.month, hardware.time.day);
-					RTCAddDate(&hardware.alarm, 0, 0, 1);
+					RTCUpdateDate(&hardware.alarm.date, hardware.datetime.date.year, hardware.datetime.date.month, hardware.datetime.date.day);
+					RTCAddDate(&hardware.alarm.date, 0, 0, 1);
 				} // */
 			}
 			else appUIPrintln("Failed updating time: invalid time!");
 		} 
 		
 		// Update Alarm
-		else if (sscanf_P(textInput.buf, PSTR("a%*[^0-9]%hhu:%hhu:%hhu"), (uint8_t *) &newTime.hour, (uint8_t *) &newTime.minute, (uint8_t *) &newTime.second) == 3)
+		else if (sscanf_P(textInput.buf, PSTR("a%*[^0-9]%hhu:%hhu:%hhu"), (uint8_t *) &newTime.time.hour, (uint8_t *) &newTime.time.minute, (uint8_t *) &newTime.time.second) == 3)
 		{
-			if (RTCUpdateAll(&hardware.alarm, hardware.time.year, hardware.time.month, hardware.time.day, newTime.hour, newTime.minute, newTime.second) == true)
+			if (RTCUpdateTime(&hardware.alarm.time, newTime.time.hour, newTime.time.minute, newTime.time.second) == true)
 			{
 				writeTimeToEE();
 				appUIPrintln("Succesfully updated alarm to: ");
-				RTCPrintAll(&newTime);
+				RTCPrintTime(&newTime.time);
 				
-				if (RTCIsSurpassed(&hardware.time, &hardware.alarm))
+				if (RTCIsSurpassedDatetime(&hardware.datetime, &hardware.alarm))
 				{
-					RTCUpdateDate(&hardware.alarm, hardware.time.year, hardware.time.month, hardware.time.day);
-					RTCAddDate(&hardware.alarm, 0, 0, 1);
+					RTCUpdateDate(&hardware.alarm.date, hardware.datetime.date.year, hardware.datetime.date.month, hardware.datetime.date.day);
+					RTCAddDate(&hardware.alarm.date, 0, 0, 1);
 				}
 			}
 			else appUIPrintln("Failed updating alarm: invalid time!");
@@ -446,15 +446,15 @@ void roomPrintDeviceStuff()
 	appUIPrintPos(LINE_DEVICES + 1, COLUMN_1,	"Device: %s, %2u / %2u", strBuf, hardware.device.number + 1, hardware.device.numberTotal);
 	appUIPrint(" (%s)", deviceNameGet(hardware.device.number));
 	
-	appUIPrintPos(LINE_DEVICES + 2, COLUMN_1,	"Board: %u, CPU: %.1f%%, Temp: %.1f C", hardware.board.id, hardware.cpu.usage, hardware.temperature);
+	appUIPrintPos(LINE_DEVICES + 2, COLUMN_1,	"Board: %u, CPU: %.1f%%, Temp: %.1f C", hardware.board.id, hardware.cpu.usage, hardware.board.temperature);
 	
 	appUIPrintPos(LINE_DEVICES + 3, COLUMN_1,	"PSU: %5d mV, Load: %5d mA", hardware.adc.milliVolts_psu, hardware.adc.milliAmps_total);
 	
 	appUIPrintPos(LINE_DEVICES + 4, COLUMN_1,	"Time:  ");
-	RTCPrintAll(&hardware.time);
+	RTCPrintDatetime(&hardware.datetime);
 	
 	appUIPrintPos(LINE_DEVICES + 5, COLUMN_1,	"Alarm: ");
-	RTCPrintTime(&hardware.alarm);
+	RTCPrintTime(&hardware.alarm.time);
 	if (hardware.alarmEnabled) {	appUIPrint("(on)"); }
 	else { 							appUIPrint("(off)"); }
 	
@@ -483,10 +483,10 @@ void printAllDataRawCommaSeperated(FILE * stream) // 105 bytes
 	// Hardware Struct, 81 bytes binary
 	{
 		// Time
-		len += snprintf_P(&everythingData.str[len], LENGTH_REMAINING(len), PSTR("%u,%u,%u,%u,%u,%u,"), hardware.time.year, hardware.time.month, hardware.time.day, hardware.time.hour, hardware.time.minute, hardware.time.second);
+		len += snprintf_P(&everythingData.str[len], LENGTH_REMAINING(len), PSTR("%u,%u,%u,%u,%u,%u,"), hardware.datetime.date.year, hardware.datetime.date.month, hardware.datetime.date.day, hardware.datetime.time.hour, hardware.datetime.time.minute, hardware.datetime.time.second);
 	
 		// Alarm
-		len += snprintf_P(&everythingData.str[len], LENGTH_REMAINING(len), PSTR("%u,%u,%u,%u,%u,%u,"), hardware.alarm.year, hardware.alarm.month, hardware.alarm.day, hardware.alarm.hour, hardware.alarm.minute, hardware.alarm.second);
+		len += snprintf_P(&everythingData.str[len], LENGTH_REMAINING(len), PSTR("%u,%u,%u,%u,%u,%u,"), hardware.alarm.date.year, hardware.alarm.date.month, hardware.alarm.date.day, hardware.alarm.time.hour, hardware.alarm.time.minute, hardware.alarm.time.second);
 	
 		// Board
 		len += snprintf_P(&everythingData.str[len], LENGTH_REMAINING(len), PSTR("%lu,%u,%u"), hardware.board.xmegaID, hardware.board.id, hardware.board.wdtCrashes);
@@ -504,7 +504,7 @@ void printAllDataRawCommaSeperated(FILE * stream) // 105 bytes
 		// TWI driver data is completely useless
 	
 		// Temperature
-		len += snprintf_P(&everythingData.str[len], LENGTH_REMAINING(len), PSTR("%.2f,"), hardware.temperature);
+		len += snprintf_P(&everythingData.str[len], LENGTH_REMAINING(len), PSTR("%.2f,"), hardware.board.temperature);
 	}
 	len += snprintf_P(&everythingData.str[len], LENGTH_REMAINING(len), PSTR("%d,"), freeRam());
 	
@@ -530,7 +530,7 @@ void printAllDataRawCommaSeperated(FILE * stream) // 105 bytes
 void writeTimeToEE()
 {
 	EEPROM_DO(&hardware.alarm, &alarmEEPROM, EEPROM_SAVE);
-	EEPROM_DO(&hardware.time, &timeEEPROM, EEPROM_SAVE);
+	EEPROM_DO(&hardware.datetime, &timeEEPROM, EEPROM_SAVE);
 	appUIPrintln("Alarm & Time Saved to EEPROM.");
 }
 
@@ -597,15 +597,144 @@ void alarmCancelButton()
 		remoteSendCommand(&cmd);
 	} //*/
 }
+// 
+// typedef struct
+// {
+// 	datetime_t time;
+// 	remoteCommand_t cmd;
+// } alarm_t;
+// 
+// 
+// uint16_t channelList_pcbid_1[12] = { 0, 0, 0, 0, 4, 8, 3, 1, };
+// uint16_t channelList_pcbid_2[12] = { 0, 0, 0, 0, 4, 8, 3, 1, };
+// uint16_t channelList_pcbid_10[12] = { 0, 0, 0, 0, 4, 8, 3, 1, };
+// uint16_t channelList_pcbid_11[12] = { 0, 0, 0, 0, 4, 8, 3, 1, };
 
 
 void alarmCheck()
 {
-	// Check for alarm
-	if (hardware.alarmEnabled && RTCIsSurpassed(&hardware.time, &hardware.alarm))
+	uint16_t * ch = ch;
+	
+// 	alarm_t alarms[] =
+// 	{
+// 		{ 
+// 			.time = { .hour = 3, .minute = 0, }, 
+// 			.cmd = { .devices_bm = 0xff, .channelNumber = 0, .device_type = device_bein, .key = poweroff_switch, }, 
+// 				
+// 		},
+// 	};
+	
+	
+	
+	
+	
+	
+	
+	
+	
+		
+	// Hardcoded bein  alarms
+	static uint8_t alarmNumber = 0;
+	
+	//////////////// DRN - HARDCODED ALARM ///////////////////////
+	// Device off at 03:00, on at 06:00; channel switch at 6:10, 13:00, 19:00, channels: 2, 3, 4, 9, 8, 5, 6, 7
+	if (hardware.board.id == 10)
 	{
-		RTCUpdateDate(&hardware.alarm, hardware.time.year, hardware.time.month, hardware.time.day);
-		RTCAddAll(&hardware.alarm, 0, 0, 0, 12, 0, 0);
+		if (alarmNumber == 0 && hardware.datetime.time.hour == 3 && hardware.datetime.time.minute == 0)
+		{
+			events_t * ev;
+			if ((ev = eventFind(&alarmCancelButton))) {
+				ev->timeLeft = MAX2((uint32_t)1000 * 300, ev->interval);
+			}
+			
+			remoteCommand_t cmd =
+			{
+				.devices_bm = 0xFF,
+				.channelNumber = 0,
+				.device_type = device_bein,
+				.key = poweroff_switch,
+			};
+			remoteSendCommand(&cmd);
+			alarmNumber++;
+		}
+		
+		else if (alarmNumber == 1 && hardware.datetime.time.hour == 6 && hardware.datetime.time.minute == 0)
+		{
+			events_t * ev;
+			if ((ev = eventFind(&alarmCancelButton))) {
+				ev->timeLeft = MAX2((uint32_t)1000 * 300, ev->interval);
+			}
+			
+			remoteCommand_t cmd =
+			{
+				.devices_bm = 0xFF,
+				.channelNumber = 0,
+				.device_type = device_bein,
+				.key = poweron_switch,
+			};
+			remoteSendCommand(&cmd);
+			alarmNumber++;
+		}
+
+		else if (	(alarmNumber >= 2 && alarmNumber <= 4 && hardware.datetime.time.hour == 6  && hardware.datetime.time.minute == 10) ||
+					(alarmNumber >= 5 && alarmNumber <= 7 && hardware.datetime.time.hour == 13 && hardware.datetime.time.minute == 0 ) ||
+					(alarmNumber >= 8 && alarmNumber <= 10 && hardware.datetime.time.hour == 19 && hardware.datetime.time.minute == 0 ))
+		{
+			events_t * ev;
+			if ((ev = eventFind(&alarmCancelButton))) {
+				ev->timeLeft = MAX2((uint32_t)1000 * 300, ev->interval);
+			}
+			
+			remoteCommand_t cmd =
+			{
+				.devices_bm = 0,
+				.channelNumber = 0,
+				.device_type = device_bein,
+				.key = noone,
+			};
+			
+			if ((((alarmNumber - 2) % 3) == 0)) 
+			{
+				cmd.devices_bm = 0x01;
+				cmd.key = one;
+				remoteSendCommand(&cmd);
+				cmd.key = zero;
+				remoteSendCommand(&cmd);
+				
+				cmd.devices_bm = 0x02;
+				cmd.key = nine;
+				remoteSendCommand(&cmd);
+			}
+			else 
+			{
+				cmd.devices_bm = 0x01;
+				cmd.key = one;
+				remoteSendCommand(&cmd);
+				cmd.key = zero;
+				remoteSendCommand(&cmd);
+				
+				cmd.devices_bm = 0x02;
+				cmd.key = nine;
+				remoteSendCommand(&cmd);
+			}
+			alarmNumber++;
+		}
+		alarmNumber = alarmNumber % 11;
+	}
+	//////////////// DRN - HARDCODED ALARM ///////////////////////
+	
+	
+	
+	
+	
+	
+	
+	
+	// Check for alarm
+	if (hardware.alarmEnabled && RTCIsSurpassedDatetime(&hardware.datetime, &hardware.alarm))
+	{
+		RTCUpdateDate(&hardware.alarm.date, hardware.datetime.date.year, hardware.datetime.date.month, hardware.datetime.date.day);
+		RTCAddDatetime(&hardware.alarm, 0, 0, 0, 12, 0, 0);
 	
 		//Start callback timer
 		eventRemove(&alarmPowerOnCallback);
@@ -616,11 +745,11 @@ void alarmCheck()
 	
 	// Hardcoded channel up down alarm: 1x per day
 	/*
-	static time_t timePrev;
-	time_t alarmTime = hardware.time; 
-	RTCUpdateTime(&alarmTime, 3, 0, 0, 0);
+	static datetime_t timePrev;
+	datetime_t alarmTime = hardware.datetime; 
+	RTCUpdateTime(&alarmTime.time, 3, 0, 0, 0);
 		
-	if (RTCIsSurpassed(hardware.time, alarmTime)
+	if (RTCIsSurpassedDatetime(hardware.datetime, alarmTime)
 	*/
 }
 

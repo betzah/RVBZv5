@@ -21,7 +21,6 @@ void eventInit(cpu_t * cpuPtr)
 }
 
 
-// Repeation < 0 means infinite; 1 for single execution
 bool eventAdd(TimeEvent_t interval_ms, int8_t repeation, void (*funcPtr)())
 {
 	for (uint8_t i = 0; i < EVENT_MAX; i++) 
@@ -31,7 +30,8 @@ bool eventAdd(TimeEvent_t interval_ms, int8_t repeation, void (*funcPtr)())
 			events[i].funcPtr = funcPtr;
 			events[i].interval = interval_ms; // use units of 1 ms
 			events[i].timeLeft = interval_ms;
-			events[i].repeation = repeation;
+			events[i].repeation = repeation & 0x7F;
+			events[i].isAbsoluteTime = 0;
 			return true;
 		}
 	}
@@ -40,15 +40,33 @@ bool eventAdd(TimeEvent_t interval_ms, int8_t repeation, void (*funcPtr)())
 }
 
 
-// Add singleton event, if no other event exists with the same event
-bool eventAddSafe(TimeEvent_t interval_ms, int8_t repeation, void (*funcPtr)())
+bool eventAddAlarm(time_t start, time_t interval, int8_t repeation, void (*funcPtr)())
 {
-	if (eventFindCount(funcPtr) == 0)
+	for (uint8_t i = 0; i < EVENT_MAX; i++)
 	{
-		return eventAdd(interval_ms, repeation, funcPtr);
+		if (events[i].interval == 0)
+		{
+			events[i].funcPtr = funcPtr;
+			//events[i].interval = interval; // use units of 1 ms
+			//events[i].timeLeft = RTCtimeUntil(&hardware.datetime, ;////////////////////////////////
+			events[i].repeation = repeation & 0x7F;
+			events[i].isAbsoluteTime = 1;
+			return true;
+		}
 	}
+	println("Event overflow error!");
 	return false;
 }
+
+// Add singleton event, if no other event exists with the same event
+// bool eventAddSafe(TimeEvent_t interval_ms, int8_t repeation, void (*funcPtr)())
+// {
+// 	if (eventFindCount(funcPtr) == 0)
+// 	{
+// 		return eventAdd(interval_ms, repeation, funcPtr);
+// 	}
+// 	return false;
+// }
 
 
 // Remove all events with given function pointer
@@ -60,10 +78,7 @@ uint8_t eventRemove(void (*funcPtr)())
 	{
 		if (events[i].funcPtr == funcPtr && events[i].interval != 0) 
 		{
-			events[i].funcPtr = 0;
-			events[i].interval = 0;
-			events[i].timeLeft = 0;
-			events[i].repeation = 0;
+			memset(&events[i], 0, sizeof * events);
 			count++;
 		}
 	}
@@ -160,12 +175,13 @@ bool eventSetTimeleft(void (*funcPtr)(), TimeEvent_t timeleft)
 }
 
 
-bool eventSetInterval(void (*funcPtr)(), TimeEvent_t interval)
+bool eventSetInterval(void (*funcPtr)(), TimeEvent_t interval, TimeEvent_t timeleft)
 {
 	events_t * ev = eventFind(funcPtr);
 	if (ev)
 	{
 		ev->interval = interval;
+		ev->timeLeft = timeleft;
 		return true;
 	}
 	return false;
@@ -177,27 +193,48 @@ bool eventSetRepeation(void (*funcPtr)(), int8_t repeation)
 	events_t * ev = eventFind(funcPtr);
 	if (ev)
 	{
-		ev->repeation = repeation;
+		ev->repeation = repeation & 0x7F;
 		return true;
 	}
 	return false;
 }
 
 
+uint16_t cpuGetCyclesSinceLastCall()
+{
+	static uint16_t prevValue = 0;
+	static bool isInitialized = false;
+	uint16_t sample = TC_CPU.CNT;
+	uint16_t result = sample - prevValue + 1;
+	prevValue = sample;
+	
+	//TC_CPU.CTRLFSET = TC_CMD_RESTART_gc;
+	if (!isInitialized) 
+	{
+		TC_CPU.PER = 65535;
+		TC_CPU.CCA = TC_CCA_INT_TIME;
+		TC_CPU.CTRLA = TC_CLKSEL_DIV64_gc;
+		TC_CPU.CTRLFSET = TC_CMD_RESTART_gc;
+		TC_CPU.INTCTRLB = TC_CCAINTLVL_LO_gc;
+	}
+	
+	return result;
+}
+
+
 // Timer Event Controller
 void eventControllerLoop(void) 
 {
-	//uint16_t cpu_on_sample = 0, cpu_off_sample = 0;
-	uint32_t cpu_on_sum = 0,	cpu_off_sum = 0;
-	uint32_t cpu_total_sample = 0, cpu_total_sum = 0;
-	uint16_t timer_temp_sample = 0;
-	uint8_t second_processed = hardware.time.second, i;
+	uint32_t cpu_on_sum = 0, cpu_off_sum = 0, cpu_total_sample = 0;
+	uint8_t i, second_processed = hardware.datetime.time.second;
 	
 	TC_CPU.PER = 65535;
 	TC_CPU.CCA = TC_CCA_INT_TIME;
 	TC_CPU.CTRLA = TC_CLKSEL_DIV64_gc;
 	TC_CPU.CTRLFSET = TC_CMD_RESTART_gc;
 	TC_CPU.INTCTRLB = TC_CCAINTLVL_LO_gc;
+	
+	//cpuGetCyclesSinceLastCall();
 	
 	// Initialise
 	set_sleep_mode(SLEEP_MODE_IDLE);
@@ -206,22 +243,23 @@ void eventControllerLoop(void)
 	while(1) 
 	{
 		// Read CPU off value
-		timer_temp_sample = TC_CPU.CNT + 1; // raw timer unit
+		uint16_t sample = TC_CPU.CNT + 1;
 		TC_CPU.CTRLFSET = TC_CMD_RESTART_gc;
-		cpu_off_sum += (uint32_t)timer_temp_sample; // raw timer unit
-		cpu_total_sample += (uint32_t)timer_temp_sample; // raw timer unit
-		CONVERT_TO_MS(cpu_total_sample); // convert to time per 1 ms
+		//uint16_t sample = cpuGetCyclesSinceLastCall(); // raw timer unit
+		cpu_off_sum += (uint32_t)sample;
+		cpu_total_sample += (uint32_t)sample;
 		
 		// Perform all events
-		eventsPerform(cpu_total_sample);
+		eventsPerform(CONVERT_TO_MS(cpu_total_sample));
 		
 		// Read CPU on value
-		timer_temp_sample = TC_CPU.CNT + 1; // raw timer unit
+		sample = TC_CPU.CNT + 1;
 		TC_CPU.CTRLFSET = TC_CMD_RESTART_gc;
-		cpu_on_sum += (uint32_t)timer_temp_sample; // raw timer unit
-		cpu_total_sample = (uint32_t)timer_temp_sample;
+		//sample = cpuGetCyclesSinceLastCall(); // raw timer unit
+		cpu_on_sum += (uint32_t)sample;
+		cpu_total_sample = (uint32_t)sample;
 		
-		i = hardware.time.second;
+		i = hardware.datetime.time.second;
 		if (second_processed != i) 
 		{
 			second_processed = i;
@@ -235,17 +273,12 @@ void eventControllerLoop(void)
 			}
 			#endif
 			
-			cpu_total_sum = cpu_off_sum + cpu_on_sum; // raw timer unit
+			uint32_t cpu_total_sum = cpu_off_sum + cpu_on_sum; // raw timer unit
 			
-			// Convert to units of 1 ms
-			CONVERT_TO_MS(cpu_total_sum);
-			CONVERT_TO_MS(cpu_on_sum);
-			CONVERT_TO_MS(cpu_off_sum);
-			
-			// Save measured data
-			cpu->total = cpu_total_sum;
-			cpu->on = cpu_on_sum;
-			cpu->off = cpu_off_sum;
+			// Save measured data in ms
+			cpu->total = CONVERT_TO_MS(cpu_total_sum);
+			cpu->on = CONVERT_TO_MS(cpu_on_sum);
+			cpu->off = CONVERT_TO_MS(cpu_off_sum);
 			
 			// Calc CPU usage in percent
 			cpu->usage = (float) 100 * cpu_on_sum / cpu_total_sum;
@@ -277,26 +310,20 @@ static void eventsPerform(TimeEvent_t cpu_total_sample)
 		
 		if (events[i].timeLeft <= cpu_total_sample)
 		{
-			//Delete event if finished
-			if (events[i].repeation == 1)
+			bool isContinueExecution = false;
+			
+			if (events[i].repeation != 1) // if not last execution, recalculate interval
 			{
-				events[i].funcPtr = 0;
-				events[i].interval = 0;
-				events[i].timeLeft = 0;
-				events[i].repeation = 0;
-			}
-			else 
-			{
-				if (events[i].repeation > 1) 
-				{
-					events[i].repeation--;
-				}
-				
-				//Recalculate interval time
+				isContinueExecution = true;
 				do {
 					events[i].timeLeft += events[i].interval;		// inefficient workaround for underflow bug...
-				} while (events[i].timeLeft < cpu_total_sample);
-				//events[i].timeLeft += events[i].interval - cpu_total_sample;
+				} while (events[i].timeLeft <= cpu_total_sample);
+				//events[i].timeLeft += events[i].interval - cpu_total_sample; // save processing time at cost of accuracy...
+			}
+			
+			if (events[i].repeation >= 1) // if not infinite execution, count down
+			{
+				events[i].repeation--;
 			}
 			
 			//Perform function and count CPU-time
@@ -311,8 +338,14 @@ static void eventsPerform(TimeEvent_t cpu_total_sample)
 			#ifdef MEASURE_EVENTS_CPU
 			events[i].cputime_temp += TC_CPU.CNT - temp
 			#endif
+			
+			if (!isContinueExecution) // if last execution
+			{
+				memset(&events[i], 0, sizeof * events);
+			}
 		}
-		else {
+		else 
+		{
 			events[i].timeLeft -= cpu_total_sample;
 		}
 	}

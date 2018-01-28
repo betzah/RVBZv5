@@ -54,23 +54,29 @@ FILE USBStream;
 
 hardware_t hardware = 
 {
-	.time =
+	.datetime =
 	{
-		.year = 16,
-		.month = 12,
-		.day = 8,
-		.hour = 1,
-		.minute = 0,
-		.second = 0,
+		.date =
+		{
+			.year = 17,
+			.month = 11,
+			.day = 4,
+		},
+		.time = 
+		{
+			.hour = 1,
+			.minute = 0,
+			.second = 0,
+		},
 	},
 	.alarm = 
 	{
-		.year = 16,
-		.month = 12,
-		.day = 8,
-		.hour = 1,
-		.minute = 0,
-		.second = 0,
+		.time = 
+		{
+			.hour = 1,
+			.minute = 0,
+			.second = 0,
+		}
 	},
 	.device = 
 	{
@@ -78,7 +84,22 @@ hardware_t hardware =
 		.number = 0,
 		.numberTotal = 12,
 		.numberTotal_bm = 0xFFF,
-	}
+	},
+	.devConfig = 
+	{
+		{ "NAME 1", device_noone, 1, },
+		{ "NAME 2", device_noone, 1, },
+		{ "NAME 3", device_noone, 1, },
+		{ "NAME 4", device_noone, 1, },
+		{ "NAME 5", device_noone, 1, },
+		{ "NAME 6", device_noone, 1, },
+		{ "NAME 7", device_noone, 1, },
+		{ "NAME 8", device_noone, 1, },
+		{ "NAME 9", device_noone, 1, },
+		{ "NAME 10", device_noone, 1, },
+		{ "NAME 11", device_noone, 1, },
+		{ "NAME 12", device_noone, 1, },
+	},	
 };
 
 
@@ -92,7 +113,7 @@ void initHardware()
 	wdtConfig(true, WDT_PER_8KCLK_gc, false, WDT_WPER_8CLK_gc);
 	initClocks(true, 16, CLK_SCLKSEL_PLL_gc, CLK_PSADIV_1_gc);
 	GPIOSet();
-	RTCInit(&hardware.time, CLK_RTCSRC_RCOSC_gc, RTC_OVFINTLVL_LO_gc, RTC_PRESCALER_DIV256_gc, 3, 1);
+	RTCInit(&hardware.datetime, CLK_RTCSRC_RCOSC_gc, RTC_OVFINTLVL_LO_gc, RTC_PRESCALER_DIV256_gc, 3);
 	initPowersaver();
 	JTAG_FORCE_DISABLE();
 	
@@ -243,28 +264,83 @@ static void initBoardID()
 	switch (hardware.board.xmegaID)
 	{
 		case 0x22001500:
-			hardware.board.id = 1;
-			//hardware.board.deviceNames[10] = { "MBC1", "Bein M2", "MBC Dra", "Bein M1", "MBC 2", "MBC P", "MBC 4", "MBC Max", };
+			{
+				hardware.board.id = 1;
+				hardware.devConfig[0] = (deviceConfig_t) { "MBC 1", device_mbc, 1, };
+				hardware.devConfig[1] = (deviceConfig_t) { "Bein M2", device_bein, 1, };
+				hardware.devConfig[2] = (deviceConfig_t) { "MBC Dra", device_mbc, 1, };
+				hardware.devConfig[3] = (deviceConfig_t) { "MBC Dr+", device_mbc, 4, };
+				hardware.devConfig[4] = (deviceConfig_t) { "MBC 2", device_mbc, 1, };
+				hardware.devConfig[5] = (deviceConfig_t) { "MBC P", device_humax, 3, };
+				hardware.devConfig[6] = (deviceConfig_t) { "MBC 4", device_humax, 1, };
+				hardware.devConfig[7] = (deviceConfig_t) { "MBC Ma", device_humax, 1, };
+			}
 		break;
-			
+		
 		case 0x03001500:
 			hardware.board.id = 2;
-			//hardware.board.deviceNames = { "Bein 1", "Bein 2", "Bein 3", "Bein 8", "Bein 7", "Bein 4", "Bein 5", "Bein 6", };
+			hardware.devConfig[0] = (deviceConfig_t) { "Bein 1", device_bein, 1, };
+			hardware.devConfig[1] = (deviceConfig_t) { "Bein 2", device_bein, 2, };
+			hardware.devConfig[2] = (deviceConfig_t) { "Bein 3", device_bein, 3, };
+			hardware.devConfig[3] = (deviceConfig_t) { "Bein 8", device_bein, 8, };
+			hardware.devConfig[4] = (deviceConfig_t) { "Bein 7", device_bein, 7, };
+			hardware.devConfig[5] = (deviceConfig_t) { "Bein 4", device_bein, 4, };
+			hardware.devConfig[6] = (deviceConfig_t) { "Bein 5", device_bein, 5, };
+			hardware.devConfig[7] = (deviceConfig_t) { "Bein 6", device_bein, 6, };
 		break;
 			
 		case 0x04001500:
 			hardware.board.id = 3;
-			//hardware.board.deviceNames = { "??", "??", "??", "??", "??", "??", "??", "??", };
+			hardware.devConfig[0] = (deviceConfig_t) { "NAME 1", device_mbc, 23, };
+			hardware.devConfig[1] = (deviceConfig_t) { "NAME 2", device_mbc, 22, };
+			hardware.devConfig[2] = (deviceConfig_t) { "NAME 3", device_mbc, 24, };
+			hardware.devConfig[3] = (deviceConfig_t) { "NAME 4", device_mbc, 3, };
+// 			hardware.devConfig[4] = (deviceConfig_t) { "NAME 5", device_noone, 1, };
+// 			hardware.devConfig[5] = (deviceConfig_t) { "NAME 6", device_noone, 1, };
+			hardware.devConfig[6] = (deviceConfig_t) { "NAME 7", device_bein, 479, };
+			hardware.devConfig[7] = (deviceConfig_t) { "NAME 8", device_bein, 11, };
+// 			hardware.devConfig[8] = (deviceConfig_t) { "NAME 9", device_noone, 1 };
+// 			hardware.devConfig[9] = (deviceConfig_t) { "NAME 10", device_noone, 1, };
+// 			hardware.devConfig[10] = (deviceConfig_t) { "NAME 11", device_noone, 1, };
+// 			hardware.devConfig[11] = (deviceConfig_t) { "NAME 12", device_noone, 1, };
 		break;
 		
 		case 0x01000b00:
 			hardware.board.id = 10;
-			//hardware.board.deviceNames = { "??", "??", "??", "??", "??", "??", "??", "??", };
+			hardware.devConfig[0] = (deviceConfig_t) { "NAME 1", device_bein, 1, };
+			hardware.devConfig[1] = (deviceConfig_t) { "NAME 2", device_bein, 1, };
+// 			hardware.devConfig[2] = (deviceConfig_t) { "NAME 3", device_noone, 1, };
+// 			hardware.devConfig[3] = (deviceConfig_t) { "NAME 4", device_noone, 1, };
+// 			hardware.devConfig[4] = (deviceConfig_t) { "NAME 5", device_noone, 1, };
+// 			hardware.devConfig[5] = (deviceConfig_t) { "NAME 6", device_noone, 1, };
+// 			hardware.devConfig[6] = (deviceConfig_t) { "NAME 7", device_noone, 1, };
+// 			hardware.devConfig[7] = (deviceConfig_t) { "NAME 8", device_noone, 1, };
+// 			hardware.devConfig[8] = (deviceConfig_t) { "NAME 9", device_noone, 1 };
+// 			hardware.devConfig[9] = (deviceConfig_t) { "NAME 10", device_noone, 1, };
+// 			hardware.devConfig[10] = (deviceConfig_t) { "NAME 11", device_noone, 1, };
+// 			hardware.devConfig[11] = (deviceConfig_t) { "NAME 12", device_noone, 1, };
 		break;
+		
+		
+		case 0x11000800:
+		hardware.board.id = 13;
+		//hardware.devConfig[0] = (deviceConfig_t) { "NAME 1", device_bein, 1, };
+		//hardware.devConfig[1] = (deviceConfig_t) { "NAME 2", device_bein, 1, };
+		// 			hardware.devConfig[2] = (deviceConfig_t) { "NAME 3", device_noone, 1, };
+		// 			hardware.devConfig[3] = (deviceConfig_t) { "NAME 4", device_noone, 1, };
+		// 			hardware.devConfig[4] = (deviceConfig_t) { "NAME 5", device_noone, 1, };
+		// 			hardware.devConfig[5] = (deviceConfig_t) { "NAME 6", device_noone, 1, };
+		// 			hardware.devConfig[6] = (deviceConfig_t) { "NAME 7", device_noone, 1, };
+		// 			hardware.devConfig[7] = (deviceConfig_t) { "NAME 8", device_noone, 1, };
+		// 			hardware.devConfig[8] = (deviceConfig_t) { "NAME 9", device_noone, 1 };
+		// 			hardware.devConfig[9] = (deviceConfig_t) { "NAME 10", device_noone, 1, };
+		// 			hardware.devConfig[10] = (deviceConfig_t) { "NAME 11", device_noone, 1, };
+		// 			hardware.devConfig[11] = (deviceConfig_t) { "NAME 12", device_noone, 1, };
+		break;
+		
 		
 		default:
 			hardware.board.id = BOARDID_UNKNOWN;
-			//hardware.board.deviceNames = { "??", "??", "??", "??", "??", "??", "??", "??", };
 			appUIPrintln("Warning: unknown microcontroller ID: 0x%08lx ", hardware.board.xmegaID);
 		break;
 	}
@@ -275,7 +351,7 @@ char * deviceNameGet(uint8_t deviceNumber)
 {
 	static char str[16] = "?";
 	
-	switch (hardware.board.id) 
+	switch ((uint8_t) hardware.board.id) 
 	{
 		case 1: // MLG
 			switch(deviceNumber)
@@ -312,14 +388,14 @@ char * deviceNameGet(uint8_t deviceNumber)
 		default:
 			switch(deviceNumber)
 			{
-// 				case 0: strcpy_P(str, PSTR("?")); break;
-// 				case 1: strcpy_P(str, PSTR("?")); break;
-// 				case 2: strcpy_P(str, PSTR("?")); break;
-// 				case 3: strcpy_P(str, PSTR("?")); break;
-// 				case 4: strcpy_P(str, PSTR("?")); break;
-// 				case 5: strcpy_P(str, PSTR("?")); break;
-// 				case 6: strcpy_P(str, PSTR("?")); break;
-// 				case 7: strcpy_P(str, PSTR("?")); break;
+				case 0: strcpy_P(str, PSTR("?")); break;
+				case 1: strcpy_P(str, PSTR("?")); break;
+				case 2: strcpy_P(str, PSTR("?")); break;
+				case 3: strcpy_P(str, PSTR("?")); break;
+				case 4: strcpy_P(str, PSTR("?")); break;
+				case 5: strcpy_P(str, PSTR("?")); break;
+				case 6: strcpy_P(str, PSTR("?")); break;
+				case 7: strcpy_P(str, PSTR("?")); break;
 			}
 		break;
 	}
@@ -467,11 +543,11 @@ void TMP112Read() // ADDR High => 0b 1001 001RW
 		uint16_t temp = ((uint16_t) hardware.twi.inputData[0] << 4) | (hardware.twi.inputData[1] >> 4); 
 		if (temp < 0x800) 
 		{
-			hardware.temperature = temp * 0.0625f;
+			hardware.board.temperature = temp * 0.0625f;
 		}
 		else
 		{
-			hardware.temperature = -1.0f; // todo: negative numbers
+			hardware.board.temperature = -1.0f; // todo: negative numbers
 		}
 	}
 }
@@ -515,21 +591,27 @@ void RX8900Read() // ADDR => 0b 0110 010RW
 	if (hardware.twi.result == TWIM_RESULT_OK && hardware.twi.bytesRead == 7)
 	{
 		appUIPrintln("RX8900CE read success!");
-		time_t timeRead = 
+		datetime_t datetimeRead = 
 		{
-			.second = (hardware.twi.inputData[0] & 0x0F) | (10 * (hardware.twi.inputData[0] & 0x70)),
-			.minute = (hardware.twi.inputData[1] & 0x0F) | (10 * (hardware.twi.inputData[1] & 0x70)),
-			.hour	= (hardware.twi.inputData[2] & 0x0F) | (10 * (hardware.twi.inputData[2] & 0x30)),
-			.day	= (hardware.twi.inputData[4] & 0x0F) | (10 * (hardware.twi.inputData[4] & 0x30)),
-			.month	= (hardware.twi.inputData[5] & 0x0F) | (10 * (hardware.twi.inputData[5] & 0x10)),
-			.year	= (hardware.twi.inputData[6] & 0x0F) | (10 * (hardware.twi.inputData[6] & 0xF0)),
+			.time =
+			{
+				.second = (hardware.twi.inputData[0] & 0x0F) | (10 * (hardware.twi.inputData[0] & 0x70)),
+				.minute = (hardware.twi.inputData[1] & 0x0F) | (10 * (hardware.twi.inputData[1] & 0x70)),
+				.hour	= (hardware.twi.inputData[2] & 0x0F) | (10 * (hardware.twi.inputData[2] & 0x30)),
+			},
+			.date = 
+			{
+				.day	= (hardware.twi.inputData[4] & 0x0F) | (10 * (hardware.twi.inputData[4] & 0x30)),
+				.month	= (hardware.twi.inputData[5] & 0x0F) | (10 * (hardware.twi.inputData[5] & 0x10)),
+				.year	= (hardware.twi.inputData[6] & 0x0F) | (10 * (hardware.twi.inputData[6] & 0xF0)),				
+			},
 		};
 		
-		if (RTCIsValid(&timeRead)) {
+		if (RTCIsValidDatetime(&datetimeRead)) {
 			appUIPrintln("time is valid!");
 		}
 		appUIPrintln("time NOT valid!");
-		hardware.time = timeRead;
+		hardware.datetime = datetimeRead;
 	}
 	twiMasterWriteRead(addr, 0, 7);
 }

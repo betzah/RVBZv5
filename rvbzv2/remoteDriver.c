@@ -27,7 +27,8 @@ static void remoteSend_BEIN(const remoteCommand_t *cmd);
 static void remotePrintCommand(const remoteCommand_t *cmd);
 static uint32_t getKeyCode(const remoteCommand_t *cmd);
 
-static uint16_t rebootDevices_bm = 0;
+static uint16_t powerOnDevices_bm = 0;
+static uint16_t powerOffDevices_bm = 0;
 
 
 static void remoteSetDataGPIO(bool state, bool hiZ, uint16_t devices_bm)
@@ -99,41 +100,47 @@ void remoteSetPowerGPIO(bool isPowerOn, deviceGroup group, uint16_t devices_bm)
 
 static void remoteRebootCallback()
 {
-	static uint16_t devices_bm = 0;
-	static uint8_t device_number = 0;
-	static bool phasePowerOn = false;
+	static uint16_t devices_poweron_bm = 0;
+	static uint16_t devices_poweroff_bm = 0;
 	
-	if (rebootDevices_bm != 0)
+	// buffer global variables and clear them
+	if (powerOnDevices_bm != 0 || powerOffDevices_bm != 0)
 	{
-		devices_bm = rebootDevices_bm;
-		device_number = 0;
-		phasePowerOn = false;
-		rebootDevices_bm = 0;
+		devices_poweron_bm = powerOnDevices_bm;
+		powerOnDevices_bm = 0;
+		
+		devices_poweroff_bm = powerOffDevices_bm;
+		powerOffDevices_bm = 0;
 	}
 	
-	if (devices_bm & (1 << device_number))
+	
+	// check bit by bit for pending devices
+	for (uint8_t i = 0; i < hardware.device.numberTotal || devices_poweroff_bm == 0; i++)
 	{
-		if (phasePowerOn)
+		if (devices_poweroff_bm & (1 << i))
 		{
-			appUIPrintln("Powering On device %u A+B", device_number + 1);
+			devices_poweroff_bm &= ~(1 << i);
+			appUIPrintln("Powering Off device %u A+B", i + 1);
+			remoteSetPowerGPIO(false, devicegroup_AB, (1 << i));
+			return;
 		}
-		else
-		{
-			appUIPrintln("Powering Off device %u A+B", device_number + 1);
-		}
-		remoteSetPowerGPIO(phasePowerOn, devicegroup_AB, (1 << device_number));
 	}
 	
-	if (++device_number > hardware.device.numberTotal - 1) 
+	
+	// check bit by bit for pending devices
+	for (uint8_t i = 0; i < hardware.device.numberTotal || devices_poweron_bm == 0; i++)
 	{
-		if (phasePowerOn) 
+		if (devices_poweron_bm & (1 << i))
 		{
-			eventRemove(&remoteRebootCallback);
-			phasePowerOn = false;
+			devices_poweron_bm &= ~(1 << i);
+			appUIPrintln("Powering On device %u A+B", i + 1);
+			remoteSetPowerGPIO(true, devicegroup_AB, (1 << i));
+			return;
 		}
-		phasePowerOn = true;
-		device_number = 0;
 	}
+	
+	appUIPrintln("Reboot finished!");
+	eventRemove(&remoteRebootCallback);
 }
 
 
@@ -147,20 +154,24 @@ void remoteSendCommand(const remoteCommand_t *cmd)
 		return;	
 	}
 	
-	if (cmd->key == power_switch)
+	
+	
+	if (cmd->key == power_switch || cmd->key == poweron_switch || cmd->key == poweroff_switch)
 	{
 		//Start callback timer
 		if (eventFindCount(&remoteRebootCallback) == 0) 
 		{
-			if (eventAdd(200, -1, &remoteRebootCallback))
+			if (eventAdd(250, 0, &remoteRebootCallback))
 			{
-				rebootDevices_bm = cmd->devices_bm;
+				powerOnDevices_bm = (cmd->key == power_switch || cmd->key == poweron_switch) ? (cmd->devices_bm) : (0);
+				powerOffDevices_bm = (cmd->key == power_switch || cmd->key == poweroff_switch) ? (cmd->devices_bm) : (0);
 				return;
 			}
 		}
 		appUIPrintln("Error: reboot is aborted! Already busy rebooting or internal error.");
 		return;
 	}
+	
 	
 	if (cmd->key == channel_number)
 	{
@@ -172,7 +183,7 @@ void remoteSendCommand(const remoteCommand_t *cmd)
 			{
 				cmd_temp.devices_bm = 1 << i;
 				
-				char digits[5];
+				char digits[6];
 				snprintf_P(digits, sizeof digits, PSTR("%u"), cmd_temp.channelNumber);
 				
 				for (int8_t j = sizeof digits - 1; j >= 0; i--)
@@ -193,7 +204,7 @@ void remoteSendCommand(const remoteCommand_t *cmd)
 					}
 					
 					if (cmd_temp.key != noone) {
-						//remoteSend(&cmd_temp);
+						remoteSend(&cmd_temp);
 					}
 					
 					if (j > 0) {

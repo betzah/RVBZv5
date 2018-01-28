@@ -20,7 +20,7 @@ typedef struct
 {
 	uint8_t board_id;
 	remoteCommand_t remoteCommand;
-	time_t time;
+	datetime_t time;
 } twiCom_t;
 
 

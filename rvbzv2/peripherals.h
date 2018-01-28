@@ -125,8 +125,17 @@ typedef struct
 	uint32_t xmegaID;
 	board_id_t id;
 	uint8_t wdtCrashes;
-	//char deviceNames[DEVICENAME_MAXDEVICES][DEVICENAME_MAXCHARACTERS + 1];
+	float temperature;
 } board_t;
+
+
+typedef struct
+{
+	char name[10];
+	deviceTypes type;
+	uint16_t ch;
+} deviceConfig_t;
+
 
 extern FILE USBStream;
 extern USB_ClassInfo_CDC_Device_t USBSerialClass;
@@ -134,13 +143,13 @@ extern uint8_t EEMEM wdtCrashesEEPROM;
 
 typedef struct 
 {
-	time_t time, alarm;
+	datetime_t datetime, alarm;
 	board_t board;
 	adc_packet_t adc;
 	cpu_t cpu;
 	twi_driver_t twi;
 	device_t device;
-	float temperature;
+	deviceConfig_t devConfig[12];
 	bool alarmEnabled;
 } hardware_t;
 

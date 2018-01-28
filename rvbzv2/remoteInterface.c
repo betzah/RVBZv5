@@ -103,9 +103,9 @@ void twiInterfaceProcess()
 				board.idOther = twiDriver.slave.inputData[0];
 				
 				// Read RTC data
-				memcpy(&hardware.time, (void *)&twiDriver.slave.inputData[1], sizeof (time_t));
+				memcpy(&hardware.datetime, (void *)&twiDriver.slave.inputData[1], sizeof (datetime_t));
 				
-				//print("Updating hardware.time: %u", RTCUpdateAll(&hardware.time,	twiDriver.slave.inputData[1], twiDriver.slave.inputData[2], twiDriver.slave.inputData[3],
+				//print("Updating hardware.datetime: %u", RTCUpdateDatetime(&hardware.datetime,	twiDriver.slave.inputData[1], twiDriver.slave.inputData[2], twiDriver.slave.inputData[3],
 				//						twiDriver.slave.inputData[4], twiDriver.slave.inputData[5], twiDriver.slave.inputData[6], twiDriver.slave.inputData[7]));
 				
 				// Read command
@@ -157,19 +157,19 @@ void twiInterfaceProcess()
 
 void twiInterfaceSendCommandOtherPCB(remoteCommand_t * cmd)
 {
-	memcpy((void *) &twiDriver.master.outputData[(1 + sizeof (time_t))], cmd, sizeof (remoteCommand_t));
+	memcpy((void *) &twiDriver.master.outputData[(1 + sizeof (datetime_t))], cmd, sizeof (remoteCommand_t));
 }
 
 
 static void twiTranceive()
 {
-	twiDriver.master.bytesToWrite = 1 + sizeof(time_t) + sizeof(remoteCommand_t);
+	twiDriver.master.bytesToWrite = 1 + sizeof(datetime_t) + sizeof(remoteCommand_t);
 	
 	twiDriver.master.outputData[0] = board.id;
-	memcpy((void *) &twiDriver.master.outputData[1], &hardware.time, sizeof(time_t));
+	memcpy((void *) &twiDriver.master.outputData[1], &hardware.datetime, sizeof(datetime_t));
 
 	TWI_MASTER_SEND(twiDriver, board.id);
-	TWI_MASTER_SEND(twiDriver, hardware.time);
+	TWI_MASTER_SEND(twiDriver, hardware.datetime);
 	
 	twiMasterWriteRead(&twiDriver.master, TWI_ADDRESS, twiDriver.master.bytesToWrite, twiDriver.master.bytesToWrite);
 }

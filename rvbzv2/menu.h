@@ -15,7 +15,7 @@
 extern EEMEM bool ethernetEnabledEEPROM;
 extern EEMEM uint8_t ethernetIPEEPROM[4];
 extern EEMEM uint8_t deviceTypeEEPROM;
-extern EEMEM time_t alarmEEPROM, timeEEPROM;
+extern EEMEM datetime_t alarmEEPROM, timeEEPROM;
 */
 
 
